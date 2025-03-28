@@ -1,0 +1,13 @@
+# RGB 이미지와 라벨 (기존 YOLO 형식)
+train: /home/heeju064/Yolo_CBAM/ultralytics/ultralytics/data/rgb/images/train
+val: /home/heeju064/Yolo_CBAM/ultralytics/ultralytics/data/rgb/images/val
+test: /home/heeju064/Yolo_CBAM/ultralytics/ultralytics/data/rgb/images/test
+
+# Thermal 이미지 경로 (FusionDataset에서 사용)
+thermal_path: /home/heeju064/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images
+# CSV 파일 경로 (VLM 기반 가중치)
+weight_csv: /home/heeju064/Yolo_CBAM/ultralytics/ultralytics/data/fire_prompt_hj_results.csv
+
+# 클래스 정보
+nc: 5
+names: ['board', 'fire', 'light', 'utensil', 'person']

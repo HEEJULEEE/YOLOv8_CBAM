@@ -845,7 +845,7 @@ class Mosaic(BaseMixTransform):
         instances = []
         imgsz = self.imgsz * 2  # mosaic imgsz
         for labels in mosaic_labels:
-            cls.append(labels["cls"])
+            cls.append(labels["instances"].classes)
             instances.append(labels["instances"])
         # Final labels
         final_labels = {

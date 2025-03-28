@@ -6,8 +6,11 @@ import re
 import types
 from copy import deepcopy
 from pathlib import Path
-
+from itertools import chain
 import torch
+
+from ultralytics.nn.modules.fusion import FusionNeck
+globals()["FusionNeck"] = FusionNeck
 
 from ultralytics.nn.modules import (
     AIFI,
@@ -63,7 +66,9 @@ from ultralytics.nn.modules import (
     TorchVision,
     WorldDetect,
     v10Detect,
+    FusionNeck,
 )
+
 from ultralytics.utils import DEFAULT_CFG_DICT, DEFAULT_CFG_KEYS, LOGGER, colorstr, emojis, yaml_load
 from ultralytics.utils.checks import check_requirements, check_suffix, check_yaml
 from ultralytics.utils.loss import (
@@ -235,7 +240,56 @@ class BaseModel(torch.nn.Module):
     def info(self, detailed=False, verbose=True, imgsz=640):
         """
         Print model information.
-
+      Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
+  0%|          | 0/243 [00:00<?, ?it/s]✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0537.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0537.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0537.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/IMG_8279.jpg shape=(1440, 1080, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0537.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/IMG_8279.jpg shape=(1440, 1080, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/IMG_8279.jpg shape=(1440, 1080, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0136.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0136.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/IMG_8279.jpg shape=(1440, 1080, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3801.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0136.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/IMG_8279.jpg shape=(1440, 1080, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR1040.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0136.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/IMG_8279.jpg shape=(1440, 1080, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0136.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0575.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0537.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3801.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3717.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0537.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
+✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0537.jpg shape=(480, 640, 3)
+  0%|          | 0/243 [00:00<?, ?it/s]
+Traceback (most recent call last):
+  File "/Users/heejulee/opt/anaconda3/envs/yolo/bin/yolo", line 8, in <module>
+    sys.exit(entrypoint())
+  File "/Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/cfg/__init__.py", line 987, in entrypoint
+    getattr(model, mode)(**overrides)  # default args from model
+  File "/Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/engine/model.py", line 791, in train
+    self.trainer.train()
+  File "/Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/engine/trainer.py", line 211, in train
+    self._do_train(world_size)
+  File "/Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/engine/trainer.py", line 384, in _do_train
+    self.loss, self.loss_items = self.model(batch)
+  File "/Users/heejulee/opt/anaconda3/envs/yolo/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/Users/heejulee/opt/anaconda3/envs/yolo/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
+    return forward_call(*args, **kwargs)
+TypeError: DetectionModel.forward() missing 2 required positional arguments: 'img_thermal' and 'weights'
         Args:
             detailed (bool): If True, prints out detailed information about the model.
             verbose (bool): If True, prints out the model information.
@@ -295,7 +349,7 @@ class BaseModel(torch.nn.Module):
         raise NotImplementedError("compute_loss() needs to be implemented by task heads")
 
 
-class DetectionModel(BaseModel):
+'''class DetectionModel(BaseModel):
     """YOLO detection model."""
 
     def __init__(self, cfg="yolo11n.yaml", ch=3, nc=None, verbose=True):  # model, input channels, number of classes
@@ -420,8 +474,176 @@ class DetectionModel(BaseModel):
 
     def init_criterion(self):
         """Initialize the loss criterion for the DetectionModel."""
-        return E2EDetectLoss(self) if getattr(self, "end2end", False) else v8DetectionLoss(self)
+        return E2EDetectLoss(self) if getattr(self, "end2end", False) else v8DetectionLoss(self)'''
 
+class DetectionModel(BaseModel):
+    """YOLO detection model with RGB-Thermal Fusion."""
+
+    def __init__(self, cfg="yolov8_fusion.yaml", ch=3, nc=None, verbose=True):
+        super().__init__()
+        self.yaml = cfg if isinstance(cfg, dict) else yaml_model_load(cfg)
+        self.args = {}  # Needed for v8DetectionLoss
+        ch = self.yaml["ch"] = self.yaml.get("ch", ch)
+
+        if nc and nc != self.yaml["nc"]:
+            LOGGER.info(f"Overriding model.yaml nc={self.yaml['nc']} with nc={nc}")
+            self.yaml["nc"] = nc
+
+        self.model, self.save = self.parse_model(deepcopy(self.yaml), ch=ch, verbose=verbose)
+        self.names = {i: f"{i}" for i in range(self.yaml["nc"])}
+        self.inplace = self.yaml.get("inplace", True)
+        self.end2end = getattr(self.model[-1], "end2end", False)
+
+        # Detection Head 설정
+        m = self.model[-1]
+        if isinstance(m, Detect):
+            s = 256
+
+            def _forward(x_rgb, x_thermal, weights):
+                return self.predict(x_rgb, x_thermal, weights)
+
+            dummy = torch.zeros(1, ch, s, s)
+            m.stride = torch.tensor([s / x.shape[-2] for x in _forward(dummy, dummy, torch.tensor([[1.0, 1.0]]))])
+            self.stride = m.stride
+            m.bias_init()
+        else:
+            self.stride = torch.Tensor([32])
+
+        initialize_weights(self)
+        if verbose:
+            self.info()
+            LOGGER.info("")
+
+        self._criterion = None  # For loss
+
+    def forward(self, img_rgb, img_thermal=None, weights=None, *args, **kwargs):
+        # ✅ Case 2: dict(batch)로 들어온 경우 (val, train 공통)
+        if isinstance(img_rgb, dict):
+            batch = img_rgb
+            device = next(self.parameters()).device  # 💡 안전하게 디바이스 가져오기
+
+            img_rgb = batch["img_rgb"].to(device)
+            img_thermal = batch["img_thermal"].to(device)
+            weight_rgb = batch["weight_rgb"].to(device)
+            weight_thermal = batch["weight_thermal"].to(device)
+            weights = torch.stack([weight_rgb, weight_thermal], dim=1)
+            batch["weights"] = weights
+        else:
+            device = img_rgb.device
+            batch = {
+                "img_rgb": img_rgb,
+                "img_thermal": img_thermal,
+                "weights": weights
+            }
+
+        # ✅ warmup or export: Thermal 없이 RGB만 들어오는 경우
+        if img_thermal is None:
+            B, _, H, W = img_rgb.shape
+            img_thermal = torch.zeros((B, 3, H, W), device=device)
+            weights = torch.tensor([[0.5, 0.5]] * B, device=device)
+
+        if self.training:
+            return self._forward_loss(img_rgb, img_thermal, weights, batch)
+
+        return self.predict(img_rgb, img_thermal, weights)
+
+    def _forward_loss(self, img_rgb, img_thermal, weights, batch):
+        preds = self.predict(img_rgb, img_thermal, weights)
+        batch["preds"] = preds
+        return self.loss(batch)
+
+    def predict(self, img_rgb, img_thermal, weights, profile=False, visualize=False, augment=False, embed=None):
+        return self._predict_once(img_rgb, img_thermal, weights, profile, visualize, embed)
+
+    def _predict_once(self, img_rgb, img_thermal, weights, profile=False, visualize=False, embed=None):
+        dtype = next(self.parameters()).dtype
+        img_rgb = img_rgb.to(dtype)
+        img_thermal = img_thermal.to(dtype)
+        if weights is not None:
+            weights = weights.to(dtype)
+        y, dt, embeddings = [], [], []
+        y_rgb, y_thermal = [], []
+        rgb_feats, thermal_feats = [], []
+
+        self.fusion_index = 20  # 수정된 FusionNeck 위치
+
+        for m in self.model:
+            if m.i < 10:
+                if m.i == 0:
+                    x = img_rgb
+                else:
+                    if m.f == -1:
+                        x = y_rgb[m.i - 1]
+                    else:
+                        x = y_rgb[m.f]
+                x = m(x)
+                y_rgb.append(x)
+                if m.i in [3, 5, 7]:
+                    rgb_feats.append(x)
+                    y.append(x)
+
+            elif 10 <= m.i < self.fusion_index:
+                if m.i == 10:
+                    #print("thermal input shape:", img_thermal.shape)
+                    x = img_thermal
+                else:
+                    if m.f == -1:
+                        x = y_thermal[m.i - 11]  # Thermal 시작 offset 보정
+                    else:
+                        x = y_thermal[m.f - 10]  # m.f는 10~이므로 보정
+                x = m(x)
+                y_thermal.append(x)
+                if m.i in [13, 15, 17]:
+                    thermal_feats.append(x)
+                    y.append(x)
+
+            elif m.i == self.fusion_index:
+                x_all = m(rgb_feats, thermal_feats, weights)  # [P3, P4, P5]
+                for feat in x_all:
+                    y.append(feat)
+                    #print(f"Fused feature y[{len(y)-1}] shape: {feat.shape}")
+
+            else:
+                # 이후 YOLO neck/head
+                if isinstance(m.f, int):
+                    #print(f"Trying to access y[{m.f}] at layer {m.i}, y len: {len(y)}")
+                    x = y[m.f]
+                else:
+                    #print(f"Trying to access {[j for j in m.f]} at layer {m.i}, y len: {len(y)}")
+                    x = [y[j] for j in m.f]
+                x = m(x)
+                y.append(x)
+
+            if visualize:
+                feature_visualization(x, m.type, m.i, save_dir=visualize)
+
+            if embed and m.i in embed:
+                pooled = torch.nn.functional.adaptive_avg_pool2d(x, (1, 1)).squeeze(-1).squeeze(-1)
+                embeddings.append(pooled)
+                if m.i == max(embed):
+                    return torch.unbind(torch.cat(embeddings, 1), dim=0)
+                
+        print("✅ Final x shape:", x.shape if isinstance(x, torch.Tensor) else type(x))
+        print("✅ Final module:", self.model[-1])
+
+        return x
+
+    def loss(self, batch, preds=None):
+        if self._criterion is None:
+            self._criterion = self.init_criterion()
+
+        if preds is None:
+            preds = self.predict(batch["img_rgb"], batch["img_thermal"], batch["weights"])
+        return self._criterion(preds, batch)
+
+    def init_criterion(self):
+        return v8DetectionLoss(self)
+
+    def parse_model(self, d, ch, verbose=True):
+        """Wrapper for parse_model to ensure FusionNeck 등록됨"""
+        from ultralytics.nn.modules.fusion import FusionNeck
+        globals()["FusionNeck"] = FusionNeck
+        return parse_model(d, ch, verbose)
 
 class OBBModel(DetectionModel):
     """YOLO Oriented Bounding Box (OBB) model."""
@@ -441,6 +663,7 @@ class OBBModel(DetectionModel):
     def init_criterion(self):
         """Initialize the loss criterion for the model."""
         return v8OBBLoss(self)
+    
 
 
 class SegmentationModel(DetectionModel):
@@ -1059,7 +1282,6 @@ def attempt_load_one_weight(weight, device=None, inplace=True, fuse=False):
     # Return model and ckpt
     return model, ckpt
 
-
 def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
     """
     Parse a YOLO model.yaml dictionary into a PyTorch model.
@@ -1073,7 +1295,15 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
         (tuple): Tuple containing the PyTorch model and sorted list of output layers.
     """
     import ast
-
+    y_to_ch_map = {
+    6: 20,  # y[6] -> ch[20]
+    7: 21,
+    8: 22,
+    11: 21,
+    14: 26,
+    17: 29,
+    20: 22,
+    }
     # Args
     legacy = True  # backward compatibility for v3/v5/v8/v9 models
     max_channels = float("inf")
@@ -1131,6 +1361,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             SCDown,
             C2fCIB,
             A2C2f,
+            FusionNeck,
         }
     )
     repeat_modules = frozenset(  # modules with 'repeat' arguments
@@ -1150,6 +1381,7 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
             C2fCIB,
             C2PSA,
             A2C2f,
+            FusionNeck,
         }
     )
     for i, (f, n, m, args) in enumerate(d["backbone"] + d["head"]):  # from, number, module, args
@@ -1165,72 +1397,107 @@ def parse_model(d, ch, verbose=True):  # model_dict, input_channels(3)
                 with contextlib.suppress(ValueError):
                     args[j] = locals()[a] if a in locals() else ast.literal_eval(a)
         n = n_ = max(round(n * depth), 1) if n > 1 else n  # depth gain
-        if m in base_modules:
-            c1, c2 = ch[f], args[0]
-            if c2 != nc:  # if c2 not equal to number of classes (i.e. for Classify() output)
-                c2 = make_divisible(min(c2, max_channels) * width, 8)
-            if m is C2fAttn:  # set 1) embed channels and 2) num heads
-                args[1] = make_divisible(min(args[1], max_channels // 2) * width, 8)
-                args[2] = int(max(round(min(args[2], max_channels // 2 // 32)) * width, 1) if args[2] > 1 else args[2])
 
-            args = [c1, c2, *args[1:]]
-            if m in repeat_modules:
-                args.insert(2, n)  # number of repeats
-                n = 1
-            if m is C3k2:  # for M/L/X sizes
-                legacy = False
-                if scale in "mlx":
-                    args[3] = True
-            if m is A2C2f:
-                legacy = False
-                if scale in "lx":  # for L/X sizes
-                    args.extend((True, 1.2))
-        elif m is AIFI:
-            args = [ch[f], *args]
-        elif m in frozenset({HGStem, HGBlock}):
-            c1, cm, c2 = ch[f], args[0], args[1]
-            args = [c1, cm, c2, *args[2:]]
-            if m is HGBlock:
-                args.insert(4, n)  # number of repeats
-                n = 1
-        elif m is ResNetLayer:
-            c2 = args[1] if args[3] else args[1] * 4
-        elif m is torch.nn.BatchNorm2d:
-            args = [ch[f]]
-        elif m is Concat:
-            c2 = sum(ch[x] for x in f)
-        elif m in frozenset({Detect, WorldDetect, Segment, Pose, OBB, ImagePoolingAttn, v10Detect}):
-            args.append([ch[x] for x in f])
-            if m is Segment:
-                args[2] = make_divisible(min(args[2], max_channels) * width, 8)
-            if m in {Detect, Segment, Pose, OBB}:
-                m.legacy = legacy
-        elif m is RTDETRDecoder:  # special case, channels arg must be passed in index 1
-            args.insert(1, [ch[x] for x in f])
-        elif m is CBLinear:
-            c2 = args[0]
-            c1 = ch[f]
-            args = [c1, c2, *args[1:]]
-        elif m is CBFuse:
-            c2 = ch[f[-1]]
-        elif m in frozenset({TorchVision, Index}):
-            c2 = args[0]
-            c1 = ch[f]
-            args = [*args[1:]]
+        # FusionNeck는 특별 처리
+        if m is FusionNeck:
+            rgb_ids, thermal_ids = f
+            args = [args[0]] 
+            m_ = m(*args)
+            m_.f = f
+            # FusionNeck의 output은 3개니까 ch도 3개 추가해줘야 함
+            ch.extend(args[0])
+            c2 = args[0][-1] 
+            #print(f"ch at layer {i}: {ch}")
+        elif m is torch.nn.Upsample:
+            m_ = m(*args)
+            m_.f = f
+            #print(f"Upsample at layer {i}, no ch append. ch remains: {ch}")
         else:
-            c2 = ch[f]
+            # 일반 모듈 처리
+            if m in base_modules:
+                if i == 10:
+                    c1 = 3
+                else:
+                    c1 = ch[f] if isinstance(f, int) else sum([ch[j] for j in f])
+                #print(f"ch at layer {i}: {ch}")
+                c2 = args[0]
+                if c2 != nc:
+                    c2 = make_divisible(min(c2, max_channels) * width, 8)
 
-        m_ = torch.nn.Sequential(*(m(*args) for _ in range(n))) if n > 1 else m(*args)  # module
+                if m is C2fAttn:
+                    args[1] = make_divisible(min(args[1], max_channels // 2) * width, 8)
+                    args[2] = int(max(round(min(args[2], max_channels // 2 // 32)) * width, 1) if args[2] > 1 else args[2])
+
+                args = [c1, c2, *args[1:]]
+                if m in repeat_modules:
+                    args.insert(2, n)
+                    n = 1
+
+                if m is C3k2:
+                    legacy = False
+                    if scale in "mlx":
+                        args[3] = True
+                if m is A2C2f:
+                    legacy = False
+                    if scale in "lx":
+                        args.extend((True, 1.2))
+            elif m is AIFI:
+                args = [ch[f], *args]
+            elif m in frozenset({HGStem, HGBlock}):
+                c1, cm, c2 = ch[f], args[0], args[1]
+                args = [c1, cm, c2, *args[2:]]
+                if m is HGBlock:
+                    args.insert(4, n)
+                    n = 1
+            elif m is ResNetLayer:
+                c2 = args[1] if args[3] else args[1] * 4
+            elif m is torch.nn.BatchNorm2d:
+                args = [ch[f]]
+            elif m is Concat:
+                used_ch_indices = [y_to_ch_map[x] if x in y_to_ch_map else x for x in f]
+                c2 = sum([ch[i] for i in used_ch_indices])
+            elif m in frozenset({Detect, WorldDetect, Segment, Pose, OBB, ImagePoolingAttn, v10Detect}):
+                mapped_indices = [y_to_ch_map[x] if x in y_to_ch_map else x for x in f]
+                args.append([ch[i] for i in mapped_indices])
+                if m is Segment:
+                    args[2] = make_divisible(min(args[2], max_channels) * width, 8)
+                if m in {Detect, Segment, Pose, OBB}:
+                    m.legacy = legacy
+            elif m is RTDETRDecoder:
+                args.insert(1, [ch[x] for x in f])
+            elif m is CBLinear:
+                c2 = args[0]
+                c1 = ch[f]
+                args = [c1, c2, *args[1:]]
+            elif m is CBFuse:
+                c2 = ch[f[-1]]
+            elif m in frozenset({TorchVision, Index}):
+                c2 = args[0]
+                c1 = ch[f]
+                args = [*args[1:]]
+            else:
+                c2 = ch[f]
+
+            # 모듈 인스턴스 생성 (반복 포함)
+            m_ = torch.nn.Sequential(*(m(*args) for _ in range(n))) if n > 1 else m(*args)
+
         t = str(m)[8:-2].replace("__main__.", "")  # module type
         m_.np = sum(x.numel() for x in m_.parameters())  # number params
         m_.i, m_.f, m_.type = i, f, t  # attach index, 'from' index, type
         if verbose:
             LOGGER.info(f"{i:>3}{str(f):>20}{n_:>3}{m_.np:10.0f}  {t:<45}{str(args):<30}")  # print
-        save.extend(x % i for x in ([f] if isinstance(f, int) else f) if x != -1)  # append to savelist
+        if isinstance(f, (list, tuple)):
+    # f가 [[2, 4, 6], [9, 11, 13]] 같이 중첩 리스트일 경우를 처리
+            flat_f = list(chain.from_iterable(f)) if isinstance(f[0], (list, tuple)) else f
+        else:
+            flat_f = [f]
+        save.extend(x % i for x in flat_f if x != -1)
+        #save.extend(x % i for x in ([f] if isinstance(f, int) else f) if x != -1)  # append to savelist
         layers.append(m_)
         if i == 0:
             ch = []
-        ch.append(c2)
+        if m not in {FusionNeck, torch.nn.Upsample, torch.nn.Identity}:
+            ch.append(c2)
     return torch.nn.Sequential(*layers), sorted(save)
 
 

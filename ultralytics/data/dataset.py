@@ -7,6 +7,7 @@ from multiprocessing.pool import ThreadPool
 from pathlib import Path
 
 import cv2
+import csv
 import numpy as np
 import torch
 from PIL import Image
@@ -280,28 +281,35 @@ class YOLODataset(BaseDataset):
     @staticmethod
     def collate_fn(batch):
         """
-        Collates data samples into batches.
+        Collate function for FusionDataset to combine samples into a batch.
 
         Args:
-            batch (List[dict]): List of dictionaries containing sample data.
+            batch (List[dict]): List of samples from FusionDataset.
 
         Returns:
-            (dict): Collated batch with stacked tensors.
+            (dict): Dictionary with batched tensors.
         """
         new_batch = {}
         keys = batch[0].keys()
-        values = list(zip(*[list(b.values()) for b in batch]))
+        values = list(zip(*[list(b.values()) for b in batch]))  # 각 key 기준으로 값 묶기
+
         for i, k in enumerate(keys):
-            value = values[i]
-            if k == "img":
-                value = torch.stack(value, 0)
-            if k in {"masks", "keypoints", "bboxes", "cls", "segments", "obb"}:
-                value = torch.cat(value, 0)
-            new_batch[k] = value
-        new_batch["batch_idx"] = list(new_batch["batch_idx"])
-        for i in range(len(new_batch["batch_idx"])):
-            new_batch["batch_idx"][i] += i  # add target image index for build_targets()
-        new_batch["batch_idx"] = torch.cat(new_batch["batch_idx"], 0)
+            v = values[i]
+            if k in {"img_rgb", "img_thermal"}:
+                v = torch.stack([torch.from_numpy(x).permute(2, 0, 1).float() / 255.0 for x in v], 0)
+            elif k in {"cls", "bboxes", "instances"}:
+                v = torch.cat(v, 0)
+            elif k in {"weight_rgb", "weight_thermal"}:
+                v = torch.tensor(v, dtype=torch.float32)
+            new_batch[k] = v
+        #print("🔍keys in collated batch:", keys)
+
+        # YOLOv8은 "batch_idx"로 각 인스턴스가 어떤 이미지에서 나왔는지 추적함
+        batch_indices = []
+        for i, b in enumerate(batch):
+            num = len(b["cls"]) if isinstance(b["cls"], torch.Tensor) else len(b["instances"])
+            batch_indices.append(torch.full((num, 1), i))
+        new_batch["batch_idx"] = torch.cat(batch_indices, 0)
         return new_batch
 
 
@@ -674,3 +682,230 @@ class ClassificationDataset:
             x["msgs"] = msgs  # warnings
             save_dataset_cache_file(self.prefix, path, x, DATASET_CACHE_VERSION)
             return samples
+
+
+class FusionDataset(BaseDataset):
+    """
+    Custom dataset for RGB-Thermal Fusion with per-image weights loaded from CSV.
+
+    Each sample returns:
+    - img_rgb: RGB image
+    - img_thermal: Thermal image
+    - weight_rgb: scalar weight
+    - weight_thermal: scalar weight
+    - instances: detection instances
+    """
+
+    def __init__(
+        self,
+        img_path,
+        thermal_path,
+        weight_csv=None,
+        data=None,
+        task="detect",
+        half = False,
+        **kwargs
+    ):
+        self.thermal_path = thermal_path
+        self.weight_csv = weight_csv
+        self.rgb2thermal = {}  # filename (no ext) -> thermal image path
+        self.weight_map = {}   # filename (no ext) -> (rgb_weight, thermal_weight)
+        self.data = data
+        self.task = task
+        self.half = half
+
+        self.use_segments = task == "segment"
+        self.use_keypoints = task == "pose"
+        self.use_obb = task == "obb"
+
+        super().__init__(img_path, **kwargs)
+
+    def get_img_files(self, img_path):
+        """Get RGB image paths and build thermal image + weight maps."""
+        rgb_files = super().get_img_files(img_path)
+        thermal_files = super().get_img_files(self.thermal_path)
+
+        # Match thermal by filename stem
+        thermal_dict = {Path(f).stem: f for f in thermal_files}
+        matched = []
+
+        for rgb_file in rgb_files:
+            stem = Path(rgb_file).stem
+            if stem in thermal_dict:
+                self.rgb2thermal[stem] = thermal_dict[stem]
+                matched.append(rgb_file)
+            else:
+                LOGGER.warning(f"No matching thermal image for {rgb_file}")
+
+        # Load CSV weights
+        if self.weight_csv:
+            with open(self.weight_csv, newline="") as csvfile:
+                reader = csv.DictReader(csvfile)
+                for row in reader:
+                    key = Path(row["Image Pair"]).stem
+                    self.weight_map[key] = (float(row["RGB Score"]), float(row["Thermal Score"]))
+
+        return matched
+
+    def get_labels(self):
+        """Load YOLO format labels for RGB images."""
+        from ultralytics.data.utils import img2label_paths, verify_image_label
+        from ultralytics.utils.torch_utils import TORCHVISION_0_18
+        from ultralytics.utils import NUM_THREADS, TQDM, LOCAL_RANK
+        from multiprocessing.pool import ThreadPool
+        from itertools import repeat
+
+        self.label_files = img2label_paths(self.im_files)
+        cache = {"labels": []}
+        total = len(self.im_files)
+        nkpt, ndim = self.data.get("kpt_shape", (0, 0)) if self.data else (0, 0)
+
+        with ThreadPool(NUM_THREADS) as pool:
+            results = pool.imap(
+                func=verify_image_label,
+                iterable=zip(
+                    self.im_files,
+                    self.label_files,
+                    repeat(self.prefix),
+                    repeat(self.use_keypoints),
+                    repeat(len(self.data["names"])),
+                    repeat(nkpt),
+                    repeat(ndim),
+                    repeat(self.single_cls),
+                ),
+            )
+            pbar = TQDM(results, desc="Scanning Fusion Dataset", total=total)
+            for im_file, lb, shape, segments, keypoint, *_ in pbar:
+                stem = Path(im_file).stem
+                if stem not in self.rgb2thermal:
+                    continue
+                cache["labels"].append(
+                    dict(
+                        im_file=im_file,
+                        thermal_file=self.rgb2thermal[stem],
+                        shape=shape,
+                        cls=lb[:, 0:1],
+                        bboxes=lb[:, 1:],
+                        segments=segments,
+                        keypoints=keypoint,
+                        normalized=True,
+                        bbox_format="xywh",
+                        weight_rgb=self.weight_map.get(stem, (1.0, 1.0))[0],
+                        weight_thermal=self.weight_map.get(stem, (1.0, 1.0))[1],
+                    )
+                )
+            pbar.close()
+        return cache["labels"]
+
+    def update_labels_info(self, label):
+        """Construct instance dict with RGB/Thermal images and weights."""
+
+        index = self.im_files.index(label["im_file"])
+    
+        # RGB 이미지 강제 로드 및 리사이즈
+        img_rgb = cv2.imread(label["im_file"])
+        assert img_rgb is not None, f"RGB image not found: {label['im_file']}"
+        img_rgb = cv2.resize(img_rgb, (self.imgsz, self.imgsz), interpolation=cv2.INTER_LINEAR)
+
+        # hermal 이미지도 동일하게 리사이즈
+        img_thermal = cv2.imread(label["thermal_file"])
+        assert img_thermal is not None, f"Thermal image not found: {label['thermal_file']}"
+        img_thermal = cv2.resize(img_thermal, (self.imgsz, self.imgsz), interpolation=cv2.INTER_LINEAR)
+
+        shape0 = img_rgb.shape[:2]
+        shape1 = img_rgb.shape[:2]
+
+        # Instances
+        bboxes = label.pop("bboxes")
+        segments = label.pop("segments", [])
+        keypoints = label.pop("keypoints", None)
+        bbox_format = label.pop("bbox_format")
+        normalized = label.pop("normalized")
+
+        if len(segments) > 0:
+            segment_resamples = 1000
+            segments = np.stack(resample_segments(segments, n=segment_resamples), axis=0)
+        else:
+            segments = np.zeros((0, 1000, 2), dtype=np.float32)
+
+        # 최종 저장
+        label["img_rgb"] = img_rgb
+        label["img_thermal"] = img_thermal
+        label["weight_rgb"] = label.pop("weight_rgb")
+        label["weight_thermal"] = label.pop("weight_thermal")
+        label["ori_shape"] = shape0
+        label["resized_shape"] = shape1
+        label["ratio_pad"] = (shape1[0] / shape0[0], shape1[1] / shape0[1])
+
+        instances = Instances(
+            bboxes=torch.tensor(bboxes, dtype=torch.float32),
+            keypoints=keypoints,
+            segments=segments,
+            bbox_format=bbox_format,
+            normalized=normalized,
+        )
+        instances.classes = torch.tensor(label.pop("cls"), dtype=torch.float32)
+        label["instances"] = instances
+
+        #print("✅ update_labels_info keys:", label.keys())
+        return label
+
+    def build_transforms(self, hyp=None):
+        """Build transformations."""
+        if self.augment:
+            hyp.mosaic = hyp.mosaic if not self.rect else 0.0
+            hyp.mixup = hyp.mixup if not self.rect else 0.0
+            transforms = v8_transforms(self, self.imgsz, hyp)
+        else:
+            transforms = Compose([LetterBox(new_shape=(self.imgsz, self.imgsz), scaleup=False)])
+        transforms.append(
+            Format(bbox_format="xywh", normalize=True, return_mask=False, return_keypoint=False, return_obb=False, batch_idx=True)
+        )
+        return transforms
+    
+    #@staticmethod
+    def collate_fn(self, batch):
+        """
+        Collate function for FusionDataset to combine samples into a batch.
+
+        Args:
+            batch (List[dict]): List of samples from FusionDataset.
+
+        Returns:
+            (dict): Dictionary with batched tensors.
+        """
+        new_batch = {}
+        keys = batch[0].keys()
+        values = list(zip(*[list(b.values()) for b in batch]))
+        
+        dtype = torch.float16 if self.half else torch.float32
+
+        for i, k in enumerate(keys):
+            v = values[i]
+            if k in {"img_rgb", "img_thermal"}:
+                tensors = [torch.from_numpy(x).permute(2, 0, 1).to(dtype=dtype) / 255.0 for x in v]
+                v = torch.stack(tensors, 0)
+                new_batch[k] = v
+
+            elif k == "instances":
+                # YOLO loss 계산을 위한 cls, bboxes 추출
+                classes = [inst.classes for inst in v]
+                bboxes = [inst.bboxes for inst in v]
+                new_batch["cls"] = torch.cat(classes, dim=0)
+                new_batch["bboxes"] = torch.cat(bboxes, dim=0)
+                new_batch["instances"] = v  # 필요하면 나중에 사용
+
+            elif k in {"weight_rgb", "weight_thermal"}:
+                new_batch[k] = torch.tensor(v, dtype=dtype)
+
+            else:
+                new_batch[k] = v
+
+        batch_indices = []
+        for i, inst in enumerate(new_batch["instances"]):
+            num = inst.bboxes.shape[0]
+            batch_indices.append(torch.full((num, 1), i))
+        new_batch["batch_idx"] = torch.cat(batch_indices, 0)
+        
+        #print(f"🧵 Final keys in new_batch: {list(new_batch.keys())}")
+        return new_batch

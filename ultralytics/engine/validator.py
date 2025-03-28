@@ -154,21 +154,30 @@ class BaseValidator:
             self.args.plots &= trainer.stopper.possible_stop or (trainer.epoch == trainer.epochs - 1)
             model.eval()
         else:
-            if str(self.args.model).endswith(".yaml") and model is None:
-                LOGGER.warning("WARNING ⚠️ validating an untrained model YAML will result in 0 mAP.")
             callbacks.add_integration_callbacks(self)
-            model = AutoBackend(
-                weights=model or self.args.model,
-                device=select_device(self.args.device, self.args.batch),
-                dnn=self.args.dnn,
-                data=self.args.data,
-                fp16=self.args.half,
-            )
-            # self.model = model
-            self.device = model.device  # update device
-            self.args.half = model.fp16  # update half
-            stride, pt, jit, engine = model.stride, model.pt, model.jit, model.engine
+    
+            is_fusion_model = hasattr(model, "predict") and hasattr(model, "_predict_once")
+
+            if not is_fusion_model:
+                model = AutoBackend(
+                    weights=model or self.args.model,
+                    device=select_device(self.args.device, self.args.batch),
+                    dnn=self.args.dnn,
+                    data=self.args.data,
+                    fp16=self.args.half,
+                )
+                self.device = model.device
+                self.args.half = model.fp16
+                stride, pt, jit, engine = model.stride, model.pt, model.jit, model.engine
+            else:
+                self.device = next(model.parameters()).device
+                self.args.half = next(model.parameters()).dtype == torch.float16
+                stride = 32  # 필요 시 조정
+                pt, jit, engine = True, False, False
+
             imgsz = check_imgsz(self.args.imgsz, stride=stride)
+
+            
             if engine:
                 self.args.batch = model.batch_size
             elif not pt and not jit:
@@ -188,9 +197,10 @@ class BaseValidator:
                 self.args.rect = False
             self.stride = model.stride  # used in get_dataloader() for padding
             self.dataloader = self.dataloader or self.get_dataloader(self.data.get(self.args.split), self.args.batch)
-
+            
             model.eval()
-            model.warmup(imgsz=(1 if pt else self.args.batch, 3, imgsz, imgsz))  # warmup
+            if hasattr(model, "warmup"):
+                model.warmup(imgsz=(1 if pt else self.args.batch, 3, imgsz, imgsz))
 
         self.run_callbacks("on_val_start")
         dt = (
@@ -211,7 +221,10 @@ class BaseValidator:
 
             # Inference
             with dt[1]:
-                preds = model(batch["img"], augment=augment)
+                if isinstance(batch, dict) and {"img_rgb", "img_thermal"}.issubset(batch.keys()):
+                    preds = model(batch)  # Fusion 구조는 dict 전체를 넘겨야 함
+                else:
+                    preds = model(batch["img"])  # 기존 YOLO 구조
 
             # Loss
             with dt[2]:

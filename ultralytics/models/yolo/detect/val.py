@@ -62,12 +62,16 @@ class DetectionValidator(BaseValidator):
         self.metrics = DetMetrics(save_dir=self.save_dir)
         self.iouv = torch.linspace(0.5, 0.95, 10)  # IoU vector for mAP@0.5:0.95
         self.niou = self.iouv.numel()
+        self.args.fusion = True
         self.lb = []  # for autolabelling
         if self.args.save_hybrid and self.args.task == "detect":
             LOGGER.warning(
                 "WARNING ⚠️ 'save_hybrid=True' will append ground truth to predictions for autolabelling.\n"
                 "WARNING ⚠️ 'save_hybrid=True' will cause incorrect mAP.\n"
             )
+        self.args.fusion = True
+        self.args.thermal_path = '/home/heeju064/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images'
+        self.args.weight_csv = '/home/heeju064/Yolo_CBAM/ultralytics/ultralytics/data/fire_prompt_hj_results.csv'
 
     def preprocess(self, batch):
         """
@@ -79,14 +83,23 @@ class DetectionValidator(BaseValidator):
         Returns:
             (dict): Preprocessed batch.
         """
-        batch["img"] = batch["img"].to(self.device, non_blocking=True)
-        batch["img"] = (batch["img"].half() if self.args.half else batch["img"].float()) / 255
+        dtype = torch.float16 if self.args.half else torch.float32
+        batch["img_rgb"] = batch["img_rgb"].to(self.device, dtype=dtype, non_blocking=True) / 255
+        batch["img_thermal"] = batch["img_thermal"].to(self.device, dtype=dtype, non_blocking=True) / 255
+        batch["weights"] = torch.stack([batch["weight_rgb"], batch["weight_thermal"]], dim=1).to(self.device, dtype=dtype)
+
+        batch["img"] = batch["img_rgb"]
         for k in ["batch_idx", "cls", "bboxes"]:
             batch[k] = batch[k].to(self.device)
+            
+        if isinstance(batch.get("ori_shape"), torch.Tensor):
+            batch["ori_shape"] = batch["ori_shape"].to(self.device)
+        if isinstance(batch.get("ratio_pad"), torch.Tensor):
+            batch["ratio_pad"] = batch["ratio_pad"].to(self.device)
 
         if self.args.save_hybrid and self.args.task == "detect":
-            height, width = batch["img"].shape[2:]
-            nb = len(batch["img"])
+            height, width = batch["img_rgb"].shape[2:]
+            nb = len(batch["img_rgb"])
             bboxes = batch["bboxes"] * torch.tensor((width, height, width, height), device=self.device)
             self.lb = [
                 torch.cat([batch["cls"][batch["batch_idx"] == i], bboxes[batch["batch_idx"] == i]], dim=-1)
@@ -139,7 +152,7 @@ class DetectionValidator(BaseValidator):
             preds,
             self.args.conf,
             self.args.iou,
-            labels=self.lb,
+            labels=self.lb if self.lb else None,
             nc=self.nc,
             multi_label=True,
             agnostic=self.args.single_cls or self.args.agnostic_nms,
@@ -160,11 +173,20 @@ class DetectionValidator(BaseValidator):
             (dict): Prepared batch with processed annotations.
         """
         idx = batch["batch_idx"] == si
+        if idx.ndim > 1:
+            idx = idx.view(-1)
         cls = batch["cls"][idx].squeeze(-1)
         bbox = batch["bboxes"][idx]
         ori_shape = batch["ori_shape"][si]
-        imgsz = batch["img"].shape[2:]
+        imgsz = batch["img_rgb"].shape[2:]
         ratio_pad = batch["ratio_pad"][si]
+        
+        if isinstance(ratio_pad, (list, tuple)) and isinstance(ratio_pad[0], (tuple, list, torch.Tensor)):
+            pass  # 정상 구조
+        else:
+            # ratio_pad가 그냥 gain(float)만 있을 경우, pad=(0, 0)으로 보정
+            ratio_pad = (ratio_pad, (0, 0))
+            
         if len(cls):
             bbox = ops.xywh2xyxy(bbox) * torch.tensor(imgsz, device=self.device)[[1, 0, 1, 0]]  # target boxes
             ops.scale_boxes(imgsz, bbox, ori_shape, ratio_pad=ratio_pad)  # native-space labels
@@ -186,7 +208,7 @@ class DetectionValidator(BaseValidator):
             pbatch["imgsz"], predn[:, :4], pbatch["ori_shape"], ratio_pad=pbatch["ratio_pad"]
         )  # native-space pred
         return predn
-
+    
     def update_metrics(self, preds, batch):
         """
         Update metrics with new predictions and ground truth.
@@ -341,8 +363,9 @@ class DetectionValidator(BaseValidator):
             batch (dict): Batch containing images and annotations.
             ni (int): Batch index.
         """
+        #img_combined = torch.cat([batch["img_rgb"], batch["img_thermal"]], dim=-1)
         plot_images(
-            batch["img"],
+            batch["img_rgb"],
             batch["batch_idx"],
             batch["cls"].squeeze(-1),
             batch["bboxes"],
@@ -362,7 +385,7 @@ class DetectionValidator(BaseValidator):
             ni (int): Batch index.
         """
         plot_images(
-            batch["img"],
+            batch["img_rgb"],
             *output_to_target(preds, max_det=self.args.max_det),
             paths=batch["im_file"],
             fname=self.save_dir / f"val_batch{ni}_pred.jpg",

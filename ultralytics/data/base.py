@@ -365,7 +365,9 @@ class BaseDataset(Dataset):
 
     def __getitem__(self, index):
         """Return transformed label information for given index."""
-        return self.transforms(self.get_image_and_label(index))
+        label = deepcopy(self.labels[index])
+        label = self.update_labels_info(label)
+        return label
 
     def get_image_and_label(self, index):
         """

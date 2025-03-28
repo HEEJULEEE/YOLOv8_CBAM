@@ -722,7 +722,10 @@ def plot_images(
             annotator.text((x + 5, y + 5), text=Path(paths[i]).name[:40], txt_color=(220, 220, 220))  # filenames
         if len(cls) > 0:
             idx = batch_idx == i
-            classes = cls[idx].astype("int")
+            if cls.ndim == 1:
+                classes = cls[idx]
+            else:
+                classes = cls[idx].astype("int")
             labels = confs is None
 
             if len(bboxes):

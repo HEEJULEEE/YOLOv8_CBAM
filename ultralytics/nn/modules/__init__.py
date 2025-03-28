@@ -89,7 +89,10 @@ from .transformer import (
     TransformerLayer,
 )
 
+from .fusion import FusionNeck
+
 __all__ = (
+    "FusionNeck",
     "Conv",
     "Conv2",
     "LightConv",
