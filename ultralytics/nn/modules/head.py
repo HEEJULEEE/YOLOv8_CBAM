@@ -61,17 +61,26 @@ class Detect(nn.Module):
             self.one2one_cv2 = copy.deepcopy(self.cv2)
             self.one2one_cv3 = copy.deepcopy(self.cv3)
 
-    def forward(self, x):
+    def forward(self, x, return_raw=False):
         """Concatenates and returns predicted bounding boxes and class probabilities."""
         if self.end2end:
             return self.forward_end2end(x)
 
         for i in range(self.nl):
             x[i] = torch.cat((self.cv2[i](x[i]), self.cv3[i](x[i])), 1)
-        if self.training:  # Training path
+            
+        if getattr(self, 'return_raw', False):
+            return_raw = True
+            
+        #print(f"[Detect] training={self.training}, return_raw={return_raw}")
+        if self.training or return_raw:  # Training path
+            if not isinstance(x, list):
+                raise TypeError(f"Detect.forward() expected list when return_raw=True, got {type(x)}")
+            #print(f"[Detect]returning raw feature list: {[t.shape for t in x]}")
             return x
+        
         y = self._inference(x)
-        return y if self.export else (y, x)
+        return y #if self.export else (y, x)
 
     def forward_end2end(self, x):
         """

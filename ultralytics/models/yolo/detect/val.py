@@ -70,8 +70,8 @@ class DetectionValidator(BaseValidator):
                 "WARNING ⚠️ 'save_hybrid=True' will cause incorrect mAP.\n"
             )
         self.args.fusion = True
-        self.args.thermal_path = '/home/heeju064/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images'
-        self.args.weight_csv = '/home/heeju064/Yolo_CBAM/ultralytics/ultralytics/data/fire_prompt_hj_results.csv'
+        self.args.thermal_path = '/home/heeju064/YOLOv8_CBAM/ultralytics/data/thermal/images'
+        self.args.weight_csv = '/home/heeju064/YOLOv8_CBAM/ultralytics/data/fire_prompt_hj_results.csv'
 
     def preprocess(self, batch):
         """
@@ -148,7 +148,19 @@ class DetectionValidator(BaseValidator):
         Returns:
             (List[torch.Tensor]): Processed predictions after NMS.
         """
-        return ops.non_max_suppression(
+        if isinstance(preds, tuple):
+            preds = preds[0]
+        #print(f"[DEBUG] Pre-NMS shape: {preds.shape}")
+        
+        if isinstance(preds, list):
+            LOGGER.warning("⚠️ postprocess(): received raw list of feature maps — skipping NMS")
+            return []
+
+        if isinstance(preds, torch.Tensor) and preds.ndim == 4:
+            LOGGER.warning(f"⚠️ postprocess(): received 4D tensor shape {preds.shape} — skipping NMS")
+            return []
+
+        output =  ops.non_max_suppression(
             preds,
             self.args.conf,
             self.args.iou,
@@ -160,7 +172,10 @@ class DetectionValidator(BaseValidator):
             end2end=self.end2end,
             rotated=self.args.task == "obb",
         )
-
+        #print(f"[DEBUG] NMS 결과: {len(output)} samples, {[p.shape for p in output if p is not None]}")
+        
+        return output
+    
     def _prepare_batch(self, si, batch):
         """
         Prepare a batch of images and annotations for validation.

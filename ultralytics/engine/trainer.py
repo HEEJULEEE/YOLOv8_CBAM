@@ -705,10 +705,18 @@ class BaseTrainer:
                     k = "train_results"  # update best.pt train_metrics from last.pt
                     strip_optimizer(f, updates={k: ckpt[k]} if k in ckpt else None)
                     LOGGER.info(f"\nValidating {f}...")
+
                     self.validator.args.plots = self.args.plots
-                    self.metrics = self.validator(model=f)
-                    self.metrics.pop("fitness", None)
-                    self.run_callbacks("on_fit_epoch_end")
+
+                    # ✅ AutoBackend 우회 처리 추가
+                    if isinstance(f, (str, Path)):
+                        LOGGER.warning("⚠️ Skipping final evaluation: AutoBackend does not support dict input (FusionModel).")
+                        continue  # 또는 그냥 skip
+                    else:
+                        self.metrics = self.validator(model=f)
+                        self.metrics.pop("fitness", None)
+                        self.run_callbacks("on_fit_epoch_end")
+
 
     def check_resume(self, overrides):
         """Check if resume checkpoint exists and update arguments accordingly."""

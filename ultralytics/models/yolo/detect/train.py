@@ -71,7 +71,7 @@ class DetectionTrainer(BaseTrainer):
         self.model.args = self.args
 
     def get_model(self, cfg=None, weights=None, verbose=True):
-        model = DetectionModel(cfg='/home/heeju064/Yolo_CBAM/ultralytics/ultralytics/cfg/models/v8/yolov8_fusion.yaml', nc=self.data["nc"], verbose=verbose and RANK == -1)
+        model = DetectionModel(cfg='/home/heeju064/YOLOv8_CBAM/ultralytics/cfg/models/v8/yolov8_fusion.yaml', nc=self.data["nc"], verbose=verbose and RANK == -1)
         if weights:
             model.load(weights)
         return model
@@ -119,14 +119,14 @@ class DetectionTrainer(BaseTrainer):
 
 def train(cfg):
     from ultralytics.cfg import get_cfg
-    cfg = get_cfg('/home/heeju064/Yolo_CBAM/ultralytics/ultralytics/cfg/models/v8/yolov8_fusion.yaml')
+    cfg = get_cfg('/home/heeju064/YOLOv8_CBAM/ultralytics/cfg/models/v8/yolov8_fusion.yaml')
     cfg['fusion'] = True
     
-    cfg.thermal_path = '/home/heeju064/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images'
-    cfg.weight_csv = '/home/heeju064/Yolo_CBAM/ultralytics/ultralytics/data/fire_prompt_hj_results.csv'
+    cfg.thermal_path = '/home/heeju064/YOLOv8_CBAM/ultralytics/data/thermal/images'
+    cfg.weight_csv = '/home/heeju064/YOLOv8_CBAM/ultralytics/data/fire_prompt_hj_results.csv'
     trainer = DetectionTrainer(overrides=cfg)
     trainer.train()
 
 
 if __name__ == "__main__":
-    train("/home/heeju064/Yolo_CBAM/ultralytics/ultralytics/cfg/fusion.yaml")  # ← 여기에 yaml 경로 넣기
+    train("/home/heeju064/YOLOv8_CBAM/ultralytics/cfg/fusion.yaml")  # ← 여기에 yaml 경로 넣기

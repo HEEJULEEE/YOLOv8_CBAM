@@ -238,63 +238,6 @@ class BaseModel(torch.nn.Module):
         return sum(isinstance(v, bn) for v in self.modules()) < thresh  # True if < 'thresh' BatchNorm layers in model
 
     def info(self, detailed=False, verbose=True, imgsz=640):
-        """
-        Print model information.
-      Epoch    GPU_mem   box_loss   cls_loss   dfl_loss  Instances       Size
-  0%|          | 0/243 [00:00<?, ?it/s]✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0537.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0537.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0537.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/IMG_8279.jpg shape=(1440, 1080, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0537.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/IMG_8279.jpg shape=(1440, 1080, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/IMG_8279.jpg shape=(1440, 1080, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0136.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0136.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/IMG_8279.jpg shape=(1440, 1080, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3801.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0136.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/IMG_8279.jpg shape=(1440, 1080, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR1040.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0136.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/IMG_8279.jpg shape=(1440, 1080, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0136.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0575.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0537.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3801.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3717.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0537.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR3829.jpg shape=(480, 640, 3)
-✅ Loaded thermal image: /Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/data/thermal/images/train/FLIR0537.jpg shape=(480, 640, 3)
-  0%|          | 0/243 [00:00<?, ?it/s]
-Traceback (most recent call last):
-  File "/Users/heejulee/opt/anaconda3/envs/yolo/bin/yolo", line 8, in <module>
-    sys.exit(entrypoint())
-  File "/Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/cfg/__init__.py", line 987, in entrypoint
-    getattr(model, mode)(**overrides)  # default args from model
-  File "/Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/engine/model.py", line 791, in train
-    self.trainer.train()
-  File "/Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/engine/trainer.py", line 211, in train
-    self._do_train(world_size)
-  File "/Users/heejulee/Desktop/FLIR/Yolo_CBAM/ultralytics/ultralytics/engine/trainer.py", line 384, in _do_train
-    self.loss, self.loss_items = self.model(batch)
-  File "/Users/heejulee/opt/anaconda3/envs/yolo/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1739, in _wrapped_call_impl
-    return self._call_impl(*args, **kwargs)
-  File "/Users/heejulee/opt/anaconda3/envs/yolo/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1750, in _call_impl
-    return forward_call(*args, **kwargs)
-TypeError: DetectionModel.forward() missing 2 required positional arguments: 'img_thermal' and 'weights'
-        Args:
-            detailed (bool): If True, prints out detailed information about the model.
-            verbose (bool): If True, prints out the model information.
-            imgsz (int): The size of the image that the model will be trained on.
-        """
         return model_info(self, detailed=detailed, verbose=verbose, imgsz=imgsz)
 
     def _apply(self, fn):
@@ -348,134 +291,6 @@ TypeError: DetectionModel.forward() missing 2 required positional arguments: 'im
         """Initialize the loss criterion for the BaseModel."""
         raise NotImplementedError("compute_loss() needs to be implemented by task heads")
 
-
-'''class DetectionModel(BaseModel):
-    """YOLO detection model."""
-
-    def __init__(self, cfg="yolo11n.yaml", ch=3, nc=None, verbose=True):  # model, input channels, number of classes
-        """
-        Initialize the YOLO detection model with the given config and parameters.
-
-        Args:
-            cfg (str | dict): Model configuration file path or dictionary.
-            ch (int): Number of input channels.
-            nc (int, optional): Number of classes.
-            verbose (bool): Whether to display model information.
-        """
-        super().__init__()
-        self.yaml = cfg if isinstance(cfg, dict) else yaml_model_load(cfg)  # cfg dict
-        if self.yaml["backbone"][0][2] == "Silence":
-            LOGGER.warning(
-                "WARNING ⚠️ YOLOv9 `Silence` module is deprecated in favor of torch.nn.Identity. "
-                "Please delete local *.pt file and re-download the latest model checkpoint."
-            )
-            self.yaml["backbone"][0][2] = "nn.Identity"
-
-        # Define model
-        ch = self.yaml["ch"] = self.yaml.get("ch", ch)  # input channels
-        if nc and nc != self.yaml["nc"]:
-            LOGGER.info(f"Overriding model.yaml nc={self.yaml['nc']} with nc={nc}")
-            self.yaml["nc"] = nc  # override YAML value
-        self.model, self.save = parse_model(deepcopy(self.yaml), ch=ch, verbose=verbose)  # model, savelist
-        self.names = {i: f"{i}" for i in range(self.yaml["nc"])}  # default names dict
-        self.inplace = self.yaml.get("inplace", True)
-        self.end2end = getattr(self.model[-1], "end2end", False)
-
-        # Build strides
-        m = self.model[-1]  # Detect()
-        if isinstance(m, Detect):  # includes all Detect subclasses like Segment, Pose, OBB, WorldDetect
-            s = 256  # 2x min stride
-            m.inplace = self.inplace
-
-            def _forward(x):
-                """Perform a forward pass through the model, handling different Detect subclass types accordingly."""
-                if self.end2end:
-                    return self.forward(x)["one2many"]
-                return self.forward(x)[0] if isinstance(m, (Segment, Pose, OBB)) else self.forward(x)
-
-            m.stride = torch.tensor([s / x.shape[-2] for x in _forward(torch.zeros(1, ch, s, s))])  # forward
-            self.stride = m.stride
-            m.bias_init()  # only run once
-        else:
-            self.stride = torch.Tensor([32])  # default stride for i.e. RTDETR
-
-        # Init weights, biases
-        initialize_weights(self)
-        if verbose:
-            self.info()
-            LOGGER.info("")
-
-    def _predict_augment(self, x):
-        """
-        Perform augmentations on input image x and return augmented inference and train outputs.
-
-        Args:
-            x (torch.Tensor): Input image tensor.
-
-        Returns:
-            (torch.Tensor): Augmented inference output.
-        """
-        if getattr(self, "end2end", False) or self.__class__.__name__ != "DetectionModel":
-            LOGGER.warning("WARNING ⚠️ Model does not support 'augment=True', reverting to single-scale prediction.")
-            return self._predict_once(x)
-        img_size = x.shape[-2:]  # height, width
-        s = [1, 0.83, 0.67]  # scales
-        f = [None, 3, None]  # flips (2-ud, 3-lr)
-        y = []  # outputs
-        for si, fi in zip(s, f):
-            xi = scale_img(x.flip(fi) if fi else x, si, gs=int(self.stride.max()))
-            yi = super().predict(xi)[0]  # forward
-            yi = self._descale_pred(yi, fi, si, img_size)
-            y.append(yi)
-        y = self._clip_augmented(y)  # clip augmented tails
-        return torch.cat(y, -1), None  # augmented inference, train
-
-    @staticmethod
-    def _descale_pred(p, flips, scale, img_size, dim=1):
-        """
-        De-scale predictions following augmented inference (inverse operation).
-
-        Args:
-            p (torch.Tensor): Predictions tensor.
-            flips (int): Flip type (0=none, 2=ud, 3=lr).
-            scale (float): Scale factor.
-            img_size (tuple): Original image size (height, width).
-            dim (int): Dimension to split at.
-
-        Returns:
-            (torch.Tensor): De-scaled predictions.
-        """
-        p[:, :4] /= scale  # de-scale
-        x, y, wh, cls = p.split((1, 1, 2, p.shape[dim] - 4), dim)
-        if flips == 2:
-            y = img_size[0] - y  # de-flip ud
-        elif flips == 3:
-            x = img_size[1] - x  # de-flip lr
-        return torch.cat((x, y, wh, cls), dim)
-
-    def _clip_augmented(self, y):
-        """
-        Clip YOLO augmented inference tails.
-
-        Args:
-            y (List[torch.Tensor]): List of detection tensors.
-
-        Returns:
-            (List[torch.Tensor]): Clipped detection tensors.
-        """
-        nl = self.model[-1].nl  # number of detection layers (P3-P5)
-        g = sum(4**x for x in range(nl))  # grid points
-        e = 1  # exclude layer count
-        i = (y[0].shape[-1] // g) * sum(4**x for x in range(e))  # indices
-        y[0] = y[0][..., :-i]  # large
-        i = (y[-1].shape[-1] // g) * sum(4 ** (nl - 1 - x) for x in range(e))  # indices
-        y[-1] = y[-1][..., i:]  # small
-        return y
-
-    def init_criterion(self):
-        """Initialize the loss criterion for the DetectionModel."""
-        return E2EDetectLoss(self) if getattr(self, "end2end", False) else v8DetectionLoss(self)'''
-
 class DetectionModel(BaseModel):
     """YOLO detection model with RGB-Thermal Fusion."""
 
@@ -502,12 +317,12 @@ class DetectionModel(BaseModel):
             def _forward(x_rgb, x_thermal, weights):
                 return self.predict(x_rgb, x_thermal, weights)
 
-            dummy = torch.zeros(1, ch, s, s)
+            dummy = torch.zeros(1, ch, s, s)  # 더미 RGB/thermal 이미지
             m.stride = torch.tensor([s / x.shape[-2] for x in _forward(dummy, dummy, torch.tensor([[1.0, 1.0]]))])
             self.stride = m.stride
             m.bias_init()
         else:
-            self.stride = torch.Tensor([32])
+            self.stride = torch.Tensor([32])    
 
         initialize_weights(self)
         if verbose:
@@ -515,13 +330,14 @@ class DetectionModel(BaseModel):
             LOGGER.info("")
 
         self._criterion = None  # For loss
+        #print("Detect stride 초기값:", self.model[-1].stride if hasattr(self.model[-1], 'stride') else "stride 없음")
+        #print("Detect anchors:", self.model[-1].anchors if hasattr(self.model[-1], 'anchors') else "anchors 없음")
 
     def forward(self, img_rgb, img_thermal=None, weights=None, *args, **kwargs):
-        # ✅ Case 2: dict(batch)로 들어온 경우 (val, train 공통)
+        # Case 2: dict(batch)로 들어온 경우 (val, train 공통)
         if isinstance(img_rgb, dict):
             batch = img_rgb
-            device = next(self.parameters()).device  # 💡 안전하게 디바이스 가져오기
-
+            device = next(self.parameters()).device  
             img_rgb = batch["img_rgb"].to(device)
             img_thermal = batch["img_thermal"].to(device)
             weight_rgb = batch["weight_rgb"].to(device)
@@ -536,15 +352,21 @@ class DetectionModel(BaseModel):
                 "weights": weights
             }
 
-        # ✅ warmup or export: Thermal 없이 RGB만 들어오는 경우
+        # warmup or export: Thermal 없이 RGB만 들어오는 경우
         if img_thermal is None:
             B, _, H, W = img_rgb.shape
             img_thermal = torch.zeros((B, 3, H, W), device=device)
             weights = torch.tensor([[0.5, 0.5]] * B, device=device)
 
         if self.training:
-            return self._forward_loss(img_rgb, img_thermal, weights, batch)
-
+            preds = self.predict(img_rgb, img_thermal, weights)
+            #print("[Train] Prediction shape:", preds[0].shape)
+            return self.loss(batch, preds)  
+        else:
+            preds = self.predict(img_rgb, img_thermal, weights)
+            #print("[Eval] Prediction shape:", preds[0].shape )
+            return self.predict(img_rgb, img_thermal, weights)
+        
         return self.predict(img_rgb, img_thermal, weights)
 
     def _forward_loss(self, img_rgb, img_thermal, weights, batch):
@@ -555,7 +377,8 @@ class DetectionModel(BaseModel):
     def predict(self, img_rgb, img_thermal, weights, profile=False, visualize=False, augment=False, embed=None):
         return self._predict_once(img_rgb, img_thermal, weights, profile, visualize, embed)
 
-    def _predict_once(self, img_rgb, img_thermal, weights, profile=False, visualize=False, embed=None):
+    def _predict_once(self, img_rgb, img_thermal, weights, profile=False, visualize=False, embed=None, init_mode=False):
+        #print(">> _predict_once called - input keys:", batch.keys())
         dtype = next(self.parameters()).dtype
         img_rgb = img_rgb.to(dtype)
         img_thermal = img_thermal.to(dtype)
@@ -598,7 +421,11 @@ class DetectionModel(BaseModel):
                     y.append(x)
 
             elif m.i == self.fusion_index:
+                #print("weight_rgb:", weights[:, 0])
+                #print("weight_thermal:", weights[:, 1])
                 x_all = m(rgb_feats, thermal_feats, weights)  # [P3, P4, P5]
+                #for i, feat in enumerate(x_all):
+                    #print(f"Fused P{i+3}: mean={feat.mean().item():.5f}, std={feat.std().item():.5f}")
                 for feat in x_all:
                     y.append(feat)
                     #print(f"Fused feature y[{len(y)-1}] shape: {feat.shape}")
@@ -623,10 +450,57 @@ class DetectionModel(BaseModel):
                 if m.i == max(embed):
                     return torch.unbind(torch.cat(embeddings, 1), dim=0)
                 
-        print("✅ Final x shape:", x.shape if isinstance(x, torch.Tensor) else type(x))
-        print("✅ Final module:", self.model[-1])
+        #print("Final x shape:", x.shape if isinstance(x, torch.Tensor) else type(x))
+        #print("Final module:", self.model[-1])
+        detect_layer = self.model[-1]
 
+        if init_mode:
+            # Detect 모듈 진입 전, feature만 뽑고 끝
+            return [y[i] for i in detect_layer.f]
+
+        if isinstance(detect_layer, Detect):
+            x = [y[i] for i in detect_layer.f]  # P3, P4, P5 feature map 리스트
+            return_raw = getattr(self, "_return_raw", False)
+            
+            if return_raw and not hasattr(self, '_loss_exists_during_val'):
+                return_raw = False
+
+            out = detect_layer(x, return_raw=return_raw)  # 이 단계에서 Detect가 training 여부에 따라 raw 또는 tensor 반환
+            #print(f"_predict_once: self.training={self.training}, _return_raw={getattr(self, '_return_raw', 'N/A')}")
+            # 학습 중이면 list(raw feature)를 그대로 반환 → loss 계산 가능
+            if self.training or return_raw:
+                assert isinstance(out, list), f"_predict_once expected raw list for loss, got {type(out)}"
+                #print("returning raw features for loss")
+                return out 
+
+            if isinstance(out, tuple):
+                #print(f"[Tuple] Received output: {[type(o) for o in out]}")
+                out = out[0]  # y만 가져오도록
+            
+            if isinstance(out, list):
+                #print(f"[Before cat] Feature shapes: {[o.shape for o in out]}")
+                out = torch.cat([o.view(o.shape[0], o.shape[1], -1) for o in out], dim=2)  # [B, C, HW]
+                #print(f"[After cat] Shape: {out.shape}")
+                out = out.permute(0, 2, 1)  # [B, HW, C]
+                #print(f"[After permute] Final Shape: {out.shape}")
+
+            elif isinstance(out, torch.Tensor) and out.ndim == 4:
+                # [B, C, H, W] → [B, HW, C]
+                B, C, H, W = out.shape
+                out = out.view(B, C, -1).permute(0, 2, 1)
+                #print(f"[Fix NDIM=4] Final Shape: {out.shape}")
+
+            elif isinstance(out, torch.Tensor) and out.ndim == 3 and out.shape[1] < out.shape[2]:
+                #print(f"[Permuting fallback] Original shape: {out.shape}")
+                out = out.permute(0, 2, 1)
+                #print(f"[After permute] Final Shape: {out.shape}")
+
+            # 여기서 반드시 반환!
+            return out
+            
+        # Detect 모듈이 아닌 경우 fallback
         return x
+
 
     def loss(self, batch, preds=None):
         if self._criterion is None:
@@ -635,7 +509,7 @@ class DetectionModel(BaseModel):
         if preds is None:
             preds = self.predict(batch["img_rgb"], batch["img_thermal"], batch["weights"])
         return self._criterion(preds, batch)
-
+    
     def init_criterion(self):
         return v8DetectionLoss(self)
 
@@ -664,7 +538,6 @@ class OBBModel(DetectionModel):
         """Initialize the loss criterion for the model."""
         return v8OBBLoss(self)
     
-
 
 class SegmentationModel(DetectionModel):
     """YOLO segmentation model."""

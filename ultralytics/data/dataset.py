@@ -847,7 +847,8 @@ class FusionDataset(BaseDataset):
         instances.classes = torch.tensor(label.pop("cls"), dtype=torch.float32)
         label["instances"] = instances
 
-        #print("✅ update_labels_info keys:", label.keys())
+        #print("update_labels_info keys:", label.keys())
+        #print(f"[DEBUG] img_rgb.mean(): {img_rgb.mean():.4f}, img_thermal.mean(): {img_thermal.mean():.4f}")
         return label
 
     def build_transforms(self, hyp=None):
@@ -907,5 +908,5 @@ class FusionDataset(BaseDataset):
             batch_indices.append(torch.full((num, 1), i))
         new_batch["batch_idx"] = torch.cat(batch_indices, 0)
         
-        #print(f"🧵 Final keys in new_batch: {list(new_batch.keys())}")
+        #print(f"Final keys in new_batch: {list(new_batch.keys())}")
         return new_batch

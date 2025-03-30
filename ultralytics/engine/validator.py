@@ -37,7 +37,7 @@ from ultralytics.utils import LOGGER, TQDM, callbacks, colorstr, emojis
 from ultralytics.utils.checks import check_imgsz
 from ultralytics.utils.ops import Profile
 from ultralytics.utils.torch_utils import de_parallel, select_device, smart_inference_mode
-
+from ultralytics.nn.modules.head import Detect
 
 class BaseValidator:
     """
@@ -152,6 +152,8 @@ class BaseValidator:
             # self.model = model
             self.loss = torch.zeros_like(trainer.loss_items, device=trainer.device)
             self.args.plots &= trainer.stopper.possible_stop or (trainer.epoch == trainer.epochs - 1)
+            model._return_raw = True
+            model._loss_exists_during_val = True
             model.eval()
         else:
             callbacks.add_integration_callbacks(self)
@@ -217,25 +219,67 @@ class BaseValidator:
             self.batch_i = batch_i
             # Preprocess
             with dt[0]:
+                #print(f"[VAL] Batch {batch_i} GT count:", [len(b) for b in batch["instances"]])
                 batch = self.preprocess(batch)
 
             # Inference
-            with dt[1]:
+            with dt[1]:  # Inference
                 if isinstance(batch, dict) and {"img_rgb", "img_thermal"}.issubset(batch.keys()):
-                    preds = model(batch)  # Fusion 구조는 dict 전체를 넘겨야 함
+                    #print(f"[VAL] Before forward, set model._return_raw = {self.training}")
+                    
+                    # raw feature 추출을 위해 명시적으로 Detect에 return_raw 설정
+                    if hasattr(model, "model") and isinstance(model.model[-1], Detect):
+                        model.model[-1].return_raw = self.training  # val에서만 True
+                    model._return_raw = self.training  # Fusion 구조라면 필요한 설정
+
+                    preds = model(batch)
+
+                    # reset
+                    model.model[-1].return_raw = False
+                    model._return_raw = False
+                    #print(f"[VAL] After forward, reset model._return_raw = {model._return_raw}")
                 else:
-                    preds = model(batch["img"])  # 기존 YOLO 구조
+                    raise ValueError("Batch does not contain RGB-Thermal inputs. Fusion validation requires img_rgb and img_thermal.")
+                        #preds = model(batch["img"])  # 기존 YOLO 구조
 
             # Loss
             with dt[2]:
+                '''if self.training:
+                    self.loss += model.loss(batch, preds)[1]'''
                 if self.training:
-                    self.loss += model.loss(batch, preds)[1]
-
+                    if isinstance(preds, tuple):  # (tensor, raw_feats)
+                        preds_tensor, raw_feats = preds
+                        self.loss += model.loss(batch, raw_feats)[1]
+                        preds = preds_tensor
+                    elif isinstance(preds, list):  # raw_feats directly
+                        #preds = torch.cat([p.view(p.shape[0], p.shape[1], -1) for p in preds], dim=2).permute(0, 2, 1)
+                        detect_module = model.model[-1]
+                        if hasattr(detect_module, "_inference"):
+                            preds = detect_module._inference(preds)  # 🔥 핵심: YOLOv8-style decode
+                            #print(f"[DEBUG] After _inference: {preds.shape}")
+                        else:
+                            raise ValueError("Detect 모듈에 _inference() 함수가 없습니다.")
             # Postprocess
             with dt[3]:
-                preds = self.postprocess(preds)
+                if preds is None:
+                    continue  # raw feature만 받은 경우, postprocess 건너뜀
 
+                preds = self.postprocess(preds)
+                
+            '''if isinstance(preds, list) or (isinstance(preds, torch.Tensor) and preds.ndim == 4):
+                LOGGER.warning("⚠️ Skipping update_metrics() and plot_predictions() due to raw feature output.")
+                continue'''
+            
             self.update_metrics(preds, batch)
+            
+            #Debuging
+            '''if isinstance(preds, list):
+                print(f"[DEBUG] postprocess() 결과: 빈 리스트 여부 = {len(preds) == 0}")
+                for i, p in enumerate(preds):
+                    print(f"[DEBUG] Sample {i} 예측 shape: {p.shape}")
+            elif isinstance(preds, torch.Tensor):
+                print(f"[DEBUG] postprocess() 결과: Tensor shape = {preds.shape}")'''
+            
             if self.args.plots and batch_i < 3:
                 self.plot_val_samples(batch, batch_i)
                 self.plot_predictions(batch, preds, batch_i)

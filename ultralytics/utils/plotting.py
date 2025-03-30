@@ -725,7 +725,8 @@ def plot_images(
             if cls.ndim == 1:
                 classes = cls[idx]
             else:
-                classes = cls[idx].astype("int")
+                classes = cls[idx].squeeze()  # ✅ squeeze해서 1차원으로 보장
+
             labels = confs is None
 
             if len(bboxes):
