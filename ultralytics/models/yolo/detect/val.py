@@ -84,8 +84,8 @@ class DetectionValidator(BaseValidator):
             (dict): Preprocessed batch.
         """
         dtype = torch.float16 if self.args.half else torch.float32
-        batch["img_rgb"] = batch["img_rgb"].to(self.device, dtype=dtype, non_blocking=True) / 255
-        batch["img_thermal"] = batch["img_thermal"].to(self.device, dtype=dtype, non_blocking=True) / 255
+        #batch["img_rgb"] = batch["img_rgb"].to(self.device, dtype=dtype, non_blocking=True) / 255
+        #batch["img_thermal"] = batch["img_thermal"].to(self.device, dtype=dtype, non_blocking=True) / 255
         batch["weights"] = torch.stack([batch["weight_rgb"], batch["weight_thermal"]], dim=1).to(self.device, dtype=dtype)
 
         batch["img"] = batch["img_rgb"]
@@ -205,8 +205,20 @@ class DetectionValidator(BaseValidator):
         if len(cls):
             bbox = ops.xywh2xyxy(bbox) * torch.tensor(imgsz, device=self.device)[[1, 0, 1, 0]]  # target boxes
             ops.scale_boxes(imgsz, bbox, ori_shape, ratio_pad=ratio_pad)  # native-space labels
-        return {"cls": cls, "bbox": bbox, "ori_shape": ori_shape, "imgsz": imgsz, "ratio_pad": ratio_pad}
+        pbatch = {
+        "cls": cls,
+        "bbox": bbox,
+        "ori_shape": ori_shape,
+        "imgsz": imgsz,
+        "ratio_pad": ratio_pad,
+        }
+  
+        # ratio_pad 확인
+        print(f"[VAL] ratio_pad: {pbatch['ratio_pad']}")
+        print(f"[VAL] bbox before scale: {bbox[:5]}")
 
+        return pbatch
+    
     def _prepare_pred(self, pred, pbatch):
         """
         Prepare predictions for evaluation against ground truth.
@@ -340,6 +352,8 @@ class DetectionValidator(BaseValidator):
             (torch.Tensor): Correct prediction matrix of shape (N, 10) for 10 IoU levels.
         """
         iou = box_iou(gt_bboxes, detections[:, :4])
+        print(f"[DEBUG] IoU matrix shape: {iou.shape}")
+        print(f"[DEBUG] IoU sample values:\n{iou[:5, :5]}")
         return self.match_predictions(detections[:, 5], gt_cls, iou)
 
     def build_dataset(self, img_path, mode="val", batch=None):
@@ -399,14 +413,25 @@ class DetectionValidator(BaseValidator):
             preds (List[torch.Tensor]): List of predictions from the model.
             ni (int): Batch index.
         """
+        img = batch["img_rgb"]
+
+        '''# ✅ 시각화용으로 float → uint8 변환 (0~255 범위)
+        if img.dtype != torch.uint8:
+            img = (img * 255).clamp(0, 255).to(torch.uint8)'''
+
+        #print(f"[PLOT] img dtype: {img.dtype}, min: {img.min().item()}, max: {img.max().item()}")
+        #print(f"[PLOT] preds sample shapes: {[p.shape for p in preds]}")
+
+        # ✅ 시각화
         plot_images(
-            batch["img_rgb"],
+            img,
             *output_to_target(preds, max_det=self.args.max_det),
             paths=batch["im_file"],
             fname=self.save_dir / f"val_batch{ni}_pred.jpg",
             names=self.names,
             on_plot=self.on_plot,
-        )  # pred
+        )
+    # pred
 
     def save_one_txt(self, predn, save_conf, shape, file):
         """
